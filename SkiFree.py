@@ -49,24 +49,62 @@ class Tree(Obstacle):
         return collider
 
 class Player:
+    collider = None
     current = 2
     position = []
     centerOfScreen = (0,0)
     def __init__(self):
         pass
+    def getCollider(self):
+        centerX = (
+            (WINDOWWIDTH/2)-(self.position[self.current].get_rect().width/2))
+        centerY =(
+            (WINDOWHEIGHT/2)-(self.position[self.current].get_rect().height/2))
+        collider = self.position[self.current].get_rect()
+        centerOfScreen = (centerX,centerY)
+        collider.x = centerOfScreen[0]
+        collider.y = centerOfScreen[1]
+        return collider
     def draw(self,surface):
         centerX = (
             (WINDOWWIDTH/2)-(self.position[self.current].get_rect().width/2))
         centerY =(
             (WINDOWHEIGHT/2)-(self.position[self.current].get_rect().height/2))
         centerOfScreen = (centerX,centerY)
-        self.surface.blit(self.position[self.current],centerOfScreen)
-    def changeDirection(direction):
-        self.current+=direction
-        if self.current<0:
-            self.current = 0
-        elif self.current>4:
-            self.current = 4
+        surface.blit(self.position[self.current],centerOfScreen)
+        #pygame.draw.rect(surface,GREEN,self.getCollider())
+    def changeDirection(self,direction):
+        if direction==2:
+            self.current = 2
+        else:
+            self.current+=direction
+            if self.current<0:
+                self.current = 0
+            elif self.current>4:
+                self.current = 4
+    def crashed(self):
+        self.current = 5
+    def getAngle(self):
+        skiSpeed = 1
+        x=0
+        y=0
+        if self.current == 2:
+            x = 0
+            y = 1
+        elif self.current == 1:
+            y = .7071
+            x = .7071
+        elif self.current==3:
+            y = .7071
+            x = -.7071
+        elif self.current == 0:
+            y = .1
+            x = .9
+        else:
+            y = .1
+            x = -.9
+        return (x,-y)
+        
 
 class Game:
     ##########CLASS VARIABLES##########
@@ -111,6 +149,10 @@ class Game:
         self.skiRightSprite = pygame.transform.flip(
             self.skiLeftSprite, True, False)
         
+        self.skiCrashed = self.spriteSheet.get_image(250,1100,234,193)
+        self.skiCrashed = pygame.transform.scale(
+            self.skiCrashed,(int(234*.25),int(193*.25)))
+        
         self.treeSprite1 = self.spriteSheet.get_image(980,470,250,438)
         self.treeSprite1 = pygame.transform.scale(
             self.treeSprite1,(int(250*.25),int(438*.25)))
@@ -121,7 +163,8 @@ class Game:
                              self.skiLeftAngleSprite,
                              self.skiDownSprite,
                              self.skiRightAngleSprite,
-                             self.skiRightSprite]
+                             self.skiRightSprite,
+                             self.skiCrashed]
         self.position = 2
         self.player = Player()
         self.player.position = self.skiPositions
@@ -143,6 +186,8 @@ class Game:
                         self.player.changeDirection(-1)
                     elif event.key==K_RIGHT:
                         self.player.changeDirection(1)
+                    elif event.key==K_DOWN:
+                        self.player.changeDirection(2)
             ##################################
                     
             self.processLogic()
@@ -151,7 +196,7 @@ class Game:
     
     ##########MAKES CHANGES FROM LAST FRAME##########
     def processLogic(self):
-        if self.position==0 or self.position==4:
+        if self.player.current==0 or self.player.current>=4:
             if self.skiSpeed>0:
                 self.skiSpeed-=.25
         elif self.skiSpeed < self.maxSkiSpeed:
@@ -160,24 +205,18 @@ class Game:
         if r<=self.chanceTreeIsAdded:
             self.addTree()
         for t in self.trees:
-            if self.position == 2:
-                y = self.skiSpeed
-                x = 0
-            elif self.position == 1:
-                y = int(self.skiSpeed*.7071)
-                x = int(self.skiSpeed*.7071)
-            elif self.position==3:
-                y = int(self.skiSpeed*.7071)
-                x = -int(self.skiSpeed*.7071)
-            elif self.position == 0:
-                y = int(self.skiSpeed*.1)
-                x = int(self.skiSpeed*.9)
-            else:
-                y = int(self.skiSpeed*.1)
-                x = -int(self.skiSpeed*.9)
-            t.y-=y
-            t.x+=x
-    
+            direction = self.player.getAngle()
+            t.y+=direction[1]*self.skiSpeed
+            t.x+=direction[0]*self.skiSpeed
+            if t.getCollider().colliderect(self.player.getCollider()):
+                #player has hit a tree
+                #self.trees.remove(t)
+                self.crashed()
+    def crashed(self):
+        self.player.crashed()
+        self.skiSpeed = 0
+        for t in self.trees:
+            t.y-=60
     ##########DRAWS THE FRAME##########
     def drawScreen(self):
         self.surface.fill(BGCOLOR)
@@ -194,7 +233,7 @@ class Game:
         for t in self.trees:
             if t.getCollider().colliderect(tree.getCollider()):
                 sane = False
-        if sane:
+        if sane and self.skiSpeed>=10:
             self.trees.append(tree)
             print("Tree added at %d,%d" % (x,y))
         
