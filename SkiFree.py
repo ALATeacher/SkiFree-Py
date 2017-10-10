@@ -11,6 +11,12 @@ GAMENAME = "SkiFree-Py"
 FRAMERATE = 60
 BGCOLOR = (255,255,255)
 
+GREEN = (0,255,0)
+RED = (255,0,0)
+BLUE = (0,0,255)
+BLACK = (0,0,0)
+WHITE = (255,255,255)
+
 
 class Obstacle:
     collider = None
@@ -23,12 +29,44 @@ class Obstacle:
         pass
     def draw(self,surface):
         surface.blit(self.image,(self.x,self.y))
+        #pygame.draw.rect(surface,GREEN,self.getCollider()) #testing
     def getCollider(self):
         collider = self.image.get_rect()
         collider.x = self.x
         collider.y = self.y
         return collider
+    
 
+class Tree(Obstacle):
+    def __init__(self,image,x,y):
+        self.image = image
+        self.x = x
+        self.y = y
+    def getCollider(self):
+        x = int(82*.25)
+        y= int(382*.25)
+        collider = pygame.Rect(self.x+x,self.y+y,25,13)
+        return collider
+
+class Player:
+    current = 2
+    position = []
+    centerOfScreen = (0,0)
+    def __init__(self):
+        pass
+    def draw(self,surface):
+        centerX = (
+            (WINDOWWIDTH/2)-(self.position[self.current].get_rect().width/2))
+        centerY =(
+            (WINDOWHEIGHT/2)-(self.position[self.current].get_rect().height/2))
+        centerOfScreen = (centerX,centerY)
+        self.surface.blit(self.position[self.current],centerOfScreen)
+    def changeDirection(direction):
+        self.current+=direction
+        if self.current<0:
+            self.current = 0
+        elif self.current>4:
+            self.current = 4
 
 class Game:
     ##########CLASS VARIABLES##########
@@ -85,6 +123,13 @@ class Game:
                              self.skiRightAngleSprite,
                              self.skiRightSprite]
         self.position = 2
+        self.player = Player()
+        self.player.position = self.skiPositions
+        self.player.current = self.position
+        ##########TESTING##########
+        #tree = Tree(self.treeSprite1,200,200)
+        #self.trees.append(tree)
+        
         ##########GAME LOOP##########
         while playing:
             delta = clock.tick(FRAMERATE)
@@ -95,11 +140,9 @@ class Game:
                     self.quit()
                 if event.type == KEYDOWN:
                     if event.key==K_LEFT:
-                        if self.position>0:
-                            self.position-=1
+                        self.player.changeDirection(-1)
                     elif event.key==K_RIGHT:
-                        if self.position<4:
-                            self.position+=1
+                        self.player.changeDirection(1)
             ##################################
                     
             self.processLogic()
@@ -138,11 +181,7 @@ class Game:
     ##########DRAWS THE FRAME##########
     def drawScreen(self):
         self.surface.fill(BGCOLOR)
-        skiOffset = (
-            self.center[0]-(self.player.get_rect().width/2),
-            self.center[1]-(self.player.get_rect().height/2)
-            )
-        self.surface.blit(self.skiPositions[self.position],skiOffset)
+        self.player.draw(self.surface)
         
         for t in self.trees:
             t.draw(self.surface)
@@ -150,7 +189,7 @@ class Game:
     def addTree(self):
         y = WINDOWHEIGHT+100
         x = randint(20,WINDOWWIDTH-20)
-        tree = Obstacle(self.treeSprite1,x,y)
+        tree = Tree(self.treeSprite1,x,y)
         sane = True
         for t in self.trees:
             if t.getCollider().colliderect(tree.getCollider()):
