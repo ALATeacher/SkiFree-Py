@@ -4,7 +4,7 @@ from random import randint
 
 from spriteHelper import SpriteSheet
 
-
+#test
 WINDOWWIDTH = 800
 WINDOWHEIGHT = 600
 GAMENAME = "SkiFree-Py"
